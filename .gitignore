@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+*.key
+alpaca_key.json
+.venv/
+venv/
+*.log
+log/
