@@ -71,6 +71,12 @@ those dates, don't re-derive them. You still need to look up the live, exact ATM
 contract (OCC symbol) at those expiries yourself via the option-chain tools, since the
 scan doesn't hand you tradeable symbols, only dates and tickers.
 
+PROCESS — work in small batches
+Don't fetch option chains for every candidate at once. Pick 2-3 at a time, look them up,
+decide, then move to the next batch. Fetching everything in one giant tool-call turn risks
+hitting the response token limit mid-batch — smaller batches are more reliable and let you
+stop early once you've filled the position cap.
+
 RISK RULES — do not deviate
 - Debit per position: cap at 2.5-3% of current portfolio equity. This is a deliberate
   middle ground for a one-shot week-long contest — sized up from a standard 1% because
@@ -163,17 +169,25 @@ async def run(tickers_override, live: bool):
                     b.model_dump() if hasattr(b, 'model_dump') else str(b) for b in resp.content
                 ]})
 
-                if resp.stop_reason != 'tool_use':
+                pending_tool_calls = [b for b in resp.content if b.type == 'tool_use']
+
+                # Judge on WHETHER there's a tool call to run, not on stop_reason alone —
+                # a response can be cut short by max_tokens after emitting several complete,
+                # valid tool_use blocks. Treating that as "no more tool use" silently drops
+                # real tool calls the model already committed to.
+                if not pending_tool_calls:
                     final_text = ''.join(b.text for b in resp.content if b.type == 'text')
                     print('\n=== AGENT SUMMARY ===')
                     print(final_text)
                     transcript.append({'final_summary': final_text})
                     break
 
+                if resp.stop_reason == 'max_tokens':
+                    print(f'  [max_tokens hit after {len(pending_tool_calls)} tool call(s) — '
+                          f'running them, then continuing]')
+
                 tool_results = []
-                for block in resp.content:
-                    if block.type != 'tool_use':
-                        continue
+                for block in pending_tool_calls:
                     name, args = block.name, block.input
                     if name in MUTATING_TOOLS and not live:
                         result_text = json.dumps({
