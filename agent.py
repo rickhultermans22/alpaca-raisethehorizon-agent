@@ -43,6 +43,11 @@ ALPACA_MCP_CMD = os.environ.get(
 )
 ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 
+MAX_POSITIONS = 8  # hard ceiling — upper bound of the 6-8 target band, enforced in code,
+                    # not just in the prompt. The model can propose whatever it wants;
+                    # this is what actually blocks it from exceeding the cap or
+                    # duplicating a ticker, in both dry-run and --live.
+
 MUTATING_TOOLS = {
     'place_stock_order', 'place_option_order', 'place_crypto_order',
     'cancel_order_by_id', 'cancel_all_orders', 'replace_order_by_id',
@@ -105,6 +110,12 @@ real batch goes live.
 """
 
 
+def occ_underlying(occ_symbol: str) -> str:
+    """AVGO260904C00370000 -> AVGO. OCC symbols end in a fixed 15 chars
+    (YYMMDD + C/P + 8-digit strike); everything before that is the root ticker."""
+    return occ_symbol[:-15]
+
+
 def to_anthropic_tools(mcp_tools):
     out = []
     for t in mcp_tools:
@@ -125,6 +136,17 @@ async def run(tickers_override, live: bool):
     acc = tc.get_account()
     print(f'=== ALPACA PAPER === equity ${float(acc.equity):,.0f} · '
           f'{"LIVE (real paper orders)" if live else "DRY RUN (no orders placed)"}\n')
+
+    # Hard, code-level guard — NOT just a prompt instruction. Seeded from real positions
+    # so it's correct even resuming into a run where positions already exist. Option
+    # position symbols come back as the OCC symbol (e.g. AVGO260904C00370000); normalize
+    # to the underlying ticker the same way occ_underlying() does for new orders.
+    existing_positions = tc.get_all_positions()
+    known_tickers = {occ_underlying(p.symbol) if len(p.symbol) > 15 else p.symbol
+                      for p in existing_positions}
+    position_count = len(existing_positions)
+    print(f'  guard: {position_count} existing position(s) on {known_tickers or "(none)"} '
+          f'— cap is {MAX_POSITIONS}\n')
 
     print('--- running scan ---')
     from alpaca_client import option_data_client, stock_data_client
@@ -189,6 +211,37 @@ async def run(tickers_override, live: bool):
                 tool_results = []
                 for block in pending_tool_calls:
                     name, args = block.name, block.input
+
+                    if name == 'place_option_order':
+                        legs = args.get('legs', [])
+                        tickers_in_order = {occ_underlying(leg['symbol']) for leg in legs
+                                             if len(leg.get('symbol', '')) > 15}
+                        dupes = tickers_in_order & known_tickers
+                        if dupes:
+                            result_text = json.dumps({
+                                'rejected': True,
+                                'reason': f'Already have a position on {sorted(dupes)} — '
+                                          f'code-level guard blocks duplicates regardless of mode.',
+                            })
+                            print(f'  [BLOCKED] {name}: duplicate ticker {sorted(dupes)}')
+                            tool_results.append({'type': 'tool_result', 'tool_use_id': block.id,
+                                                  'content': result_text})
+                            continue
+                        if position_count >= MAX_POSITIONS:
+                            result_text = json.dumps({
+                                'rejected': True,
+                                'reason': f'Position cap ({MAX_POSITIONS}) reached — '
+                                          f'code-level guard, not a suggestion.',
+                            })
+                            print(f'  [BLOCKED] {name}: cap ({MAX_POSITIONS}) reached')
+                            tool_results.append({'type': 'tool_result', 'tool_use_id': block.id,
+                                                  'content': result_text})
+                            continue
+                        # Passed the guard — reserve the slot now, before dry-run/live branch,
+                        # so a batch of proposals in the same turn can't jointly blow the cap.
+                        known_tickers |= tickers_in_order
+                        position_count += 1
+
                     if name in MUTATING_TOOLS and not live:
                         result_text = json.dumps({
                             'dry_run': True,
