@@ -1,0 +1,13 @@
+run = "streamlit run dashboard.py --server.port 3000 --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false"
+entrypoint = "dashboard.py"
+
+[nix]
+channel = "stable-24_05"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+[deployment]
+run = ["sh", "-c", "streamlit run dashboard.py --server.port 3000 --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false"]
+deploymentTarget = "cloudrun"
