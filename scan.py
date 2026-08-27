@@ -116,6 +116,9 @@ def scan_ticker(odc, sdc, ticker, tier, today):
     if not front_exp or not back_exp or front_exp not in per_exp or back_exp not in per_exp:
         row['error'] = 'no usable front/back expiry'
         return row
+    if front_exp == back_exp:
+        row['error'] = 'front == back expiry (name likely has no weekly cycle — not a real calendar)'
+        return row
 
     front = atm_contract(per_exp, front_exp, spot)
     back = atm_contract(per_exp, back_exp, spot)
