@@ -6,4 +6,3 @@ alpaca_key.json
 .venv/
 venv/
 *.log
-log/

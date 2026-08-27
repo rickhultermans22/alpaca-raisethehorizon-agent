@@ -1,0 +1,51 @@
+name: Scheduled dry-run scan
+
+# Makes the agent genuinely autonomous instead of depending on someone remembering to
+# trigger it each evening: runs agent.py a few times a day during U.S. market hours and
+# commits its decision log straight back into the repo.
+#
+# SAFETY: this workflow NEVER passes --live. It only ever runs the default dry-run mode,
+# where every mutating Alpaca tool call (place/cancel/close/roll an order) is intercepted
+# and logged instead of executed. Promoting a proposal to a real (paper) trade is a
+# separate, manually-triggered step — see agent.py's own docstring.
+
+on:
+  schedule:
+    - cron: '0 14,17,20 * * 1-5'   # 14:00 / 17:00 / 20:00 UTC, weekdays — open through close
+  workflow_dispatch: {}             # manual "Run workflow" button too
+
+permissions:
+  contents: write   # needed to commit the decision log back to the repo
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install -r requirements.txt
+
+      - name: Write .env (from repo secrets, never committed — .env is gitignored)
+        run: |
+          echo "ALPACA_API_KEY=${{ secrets.ALPACA_API_KEY }}" >> .env
+          echo "ALPACA_SECRET_KEY=${{ secrets.ALPACA_SECRET_KEY }}" >> .env
+          echo "ALPACA_PAPER_TRADE=true" >> .env
+          echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
+
+      - name: Point at the Linux-installed alpaca-mcp-server (agent.py defaults to a Windows path)
+        run: echo "ALPACA_MCP_CMD=$(python -c 'import shutil; print(shutil.which("alpaca-mcp-server"))')" >> "$GITHUB_ENV"
+
+      - name: Run the agent (dry run — no --live flag, ever, in CI)
+        run: python agent.py
+
+      - name: Commit the decision log
+        run: |
+          git config user.name "hackathon-agent-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add log/
+          git diff --cached --quiet || git commit -m "Scheduled dry-run scan $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push

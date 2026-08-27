@@ -1,0 +1,40 @@
+{
+  "run_utc": "20260827T171602Z",
+  "threshold": 1.3,
+  "rows": [
+    {
+      "ticker": "GOLD",
+      "tier": "A",
+      "ok": false,
+      "spot": 43.245,
+      "error": "front == back expiry (name likely has no weekly cycle \u2014 not a real calendar)"
+    },
+    {
+      "ticker": "NTAP",
+      "tier": "A",
+      "ok": false,
+      "spot": 184.535,
+      "error": "front == back expiry (name likely has no weekly cycle \u2014 not a real calendar)"
+    },
+    {
+      "ticker": "AVGO",
+      "tier": "A",
+      "ok": true,
+      "spot": 370.07,
+      "front_expiry": "2026-09-04",
+      "front_dte": 8,
+      "front_strike": 370.0,
+      "front_iv": 0.7415,
+      "front_mid": 16.450000000000003,
+      "front_liquid": true,
+      "back_expiry": "2026-09-25",
+      "back_dte": 29,
+      "back_strike": 370.0,
+      "back_iv": 0.5113,
+      "back_mid": 21.880000000000003,
+      "back_liquid": true,
+      "ratio": 1.45,
+      "candidate": true
+    }
+  ]
+}
