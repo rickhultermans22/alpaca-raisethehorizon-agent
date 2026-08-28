@@ -101,8 +101,9 @@ RISK RULES — do not deviate
   correct output.
 
 At the end, write a short plain-language summary: what you looked at, what you did (or
-would have done, in dry run), and why. That summary is what a human reviews before any
-real batch goes live.
+would have done, in dry run), and why. There is no human gate before a real batch goes
+live in production, this summary is the public audit trail people read afterward, not a
+pre-execution checkpoint. So the reasoning has to stand on its own.
 """
 
 
