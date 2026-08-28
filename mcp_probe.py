@@ -11,29 +11,22 @@ actually runs on.
 Usage:  python mcp_probe.py
 """
 import asyncio
-import json
 import os
-import shutil
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-ALPACA_MCP_CMD = os.environ.get(
-    'ALPACA_MCP_CMD',
-    r'C:\Users\rickh\AppData\Local\Python\pythoncore-3.14-64\Scripts\alpaca-mcp-server.exe',
-)
 ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 
 
 async def main():
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
+    from alpaca_client import mcp_server_command_args
 
-    if not os.path.exists(ALPACA_MCP_CMD):
-        raise SystemExit(f'alpaca-mcp-server not found at {ALPACA_MCP_CMD} — set ALPACA_MCP_CMD.')
-
-    params = StdioServerParameters(command=ALPACA_MCP_CMD, args=['--env-file', ENV_FILE])
+    mcp_cmd, mcp_args = mcp_server_command_args(ENV_FILE)
+    params = StdioServerParameters(command=mcp_cmd, args=mcp_args)
 
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:

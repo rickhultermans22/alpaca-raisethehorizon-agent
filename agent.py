@@ -37,10 +37,6 @@ from alpaca_client import trading_client
 
 MODEL = 'claude-sonnet-5'
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'log')
-ALPACA_MCP_CMD = os.environ.get(
-    'ALPACA_MCP_CMD',
-    r'C:\Users\rickh\AppData\Local\Python\pythoncore-3.14-64\Scripts\alpaca-mcp-server.exe',
-)
 ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 
 MAX_POSITIONS = 8  # hard ceiling — upper bound of the 6-8 target band, enforced in code,
@@ -161,7 +157,9 @@ async def run(tickers_override, live: bool):
     candidates = [r for r in rows if r.get('candidate')]
     print(f'{len(candidates)} candidate(s): ' + (', '.join(r['ticker'] for r in candidates) or '(none)'))
 
-    params = StdioServerParameters(command=ALPACA_MCP_CMD, args=['--env-file', ENV_FILE])
+    from alpaca_client import mcp_server_command_args
+    mcp_cmd, mcp_args = mcp_server_command_args(ENV_FILE)
+    params = StdioServerParameters(command=mcp_cmd, args=mcp_args)
     transcript = []
 
     async with stdio_client(params) as (read, write):

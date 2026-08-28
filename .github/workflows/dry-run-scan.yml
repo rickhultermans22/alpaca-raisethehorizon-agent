@@ -47,17 +47,9 @@ jobs:
           [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ] && echo "::error::ANTHROPIC_API_KEY repo secret is empty/missing" && fail=1
           exit $fail
 
-      - name: Locate alpaca-mcp-server (PATH-independent — resolved relative to this Python's own bin dir)
-        run: |
-          CMD=$(python -c "import os, sys; print(os.path.join(os.path.dirname(sys.executable), 'alpaca-mcp-server'))")
-          echo "ALPACA_MCP_CMD=$CMD" >> "$GITHUB_ENV"
-          echo "resolved: $CMD"
-
-      - name: Verify alpaca-mcp-server actually exists at that path
-        run: |
-          test -f "$ALPACA_MCP_CMD" || { echo "::error::not found at $ALPACA_MCP_CMD — listing the bin dir instead:"; ls -la "$(dirname "$ALPACA_MCP_CMD")"; exit 1; }
-          test -x "$ALPACA_MCP_CMD" || { echo "::error::found but not executable: $ALPACA_MCP_CMD"; exit 1; }
-          echo "OK: $ALPACA_MCP_CMD is present and executable"
+      - name: Verify the alpaca_mcp_server package actually imports (fails here if the
+          install itself is broken, before the agent gets a confusing downstream error)
+        run: python -c "from alpaca_mcp_server.cli import main; print('import OK:', main)"
 
       - name: Run the agent (dry run — no --live flag, ever, in CI)
         run: python agent.py

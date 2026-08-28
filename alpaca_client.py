@@ -6,10 +6,25 @@ Reads ALPACA_API_KEY / ALPACA_SECRET_KEY / ALPACA_PAPER_TRADE from the environme
 repo is public.
 """
 import os
+import sys
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def mcp_server_command_args(env_file: str):
+    """Command + args to spawn Alpaca's MCP server, for use with StdioServerParameters.
+
+    Deliberately does NOT locate the installed `alpaca-mcp-server` console-script on
+    disk — that path guessing (relative to sys.executable, or via shutil.which/PATH)
+    failed repeatedly in CI because pip's script-install location isn't reliably
+    predictable across environments. Invoking the entry point function directly via
+    `sys.executable -c "..."` only depends on the package being IMPORTABLE, which pip
+    install always guarantees — no path-guessing left to get wrong.
+    """
+    code = 'from alpaca_mcp_server.cli import main; main()'
+    return sys.executable, ['-c', code, '--env-file', env_file]
 
 
 def _keys():
