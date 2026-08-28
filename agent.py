@@ -99,6 +99,14 @@ RISK RULES — do not deviate
 - This strategy is UNVALIDATED — you are not chasing conviction, you are executing a
   fixed, conservative rule set. If nothing qualifies today, doing nothing is the
   correct output.
+- Order management: always check get_orders(status="open") first, not just
+  get_all_positions. A limit order placed earlier the same day may still be sitting
+  unfilled — check its limit price against the current live quote. If the market has
+  moved and the limit now looks unrealistic (materially worse than the current mid,
+  not just a few cents), cancel and replace it at a price closer to the current mid,
+  same debit-cap logic as a new order. If it still looks reasonable, leave it, don't
+  touch orders that are still fine. This applies on every run, not just the first one
+  of the day.
 
 At the end, write a short plain-language summary: what you looked at, what you did (or
 would have done, in dry run), and why. There is no human gate before a real batch goes
