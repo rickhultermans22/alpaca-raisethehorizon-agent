@@ -1,38 +1,52 @@
-name: Scheduled dry-run scan
+name: Scheduled live trading run
 
-# Makes the agent genuinely autonomous instead of depending on someone remembering to
-# trigger it each evening: runs agent.py a few times a day during U.S. market hours and
-# commits its decision log straight back into the repo.
+# Runs the agent autonomously, several times a day on weekdays, and commits its own
+# decision log back into the repo. No one has to remember to start it.
 #
-# SAFETY: this workflow NEVER passes --live. It only ever runs the default dry-run mode,
-# where every mutating Alpaca tool call (place/cancel/close/roll an order) is intercepted
-# and logged instead of executed. Promoting a proposal to a real (paper) trade is a
-# separate, manually-triggered step — see agent.py's own docstring.
+# AUTONOMY: this workflow runs agent.py with --live. Real (paper) orders get placed on
+# schedule, with no human approval step per batch, that's a deliberate choice made for
+# this hackathon (2026-08-28), not an oversight. The actual safety net is in the code,
+# not in a human reviewing each run: a hard cap on concurrent positions, a duplicate-
+# ticker guard, a liquidity check before any order, and conservative sizing (2.5-3% of
+# equity per position). See agent.py's own docstring and MAX_POSITIONS.
+#
+# KICKOFF GATE: the hackathon's contest window starts 2026-08-28 15:00 UTC. A step below
+# refuses to run before that, so an early manual trigger (or a misconfigured schedule)
+# can't place a real trade before the event has actually started.
 
 on:
   schedule:
-    - cron: '0 14,17,20 * * 1-5'   # 14:00 / 17:00 / 20:00 UTC, weekdays — open through close
+    - cron: '0 14,17,20 * * 1-5'   # 14:00 / 17:00 / 20:00 UTC, weekdays, open through close
   workflow_dispatch: {}             # manual "Run workflow" button too
 
 permissions:
   contents: write   # needed to commit the decision log back to the repo
 
 jobs:
-  dry-run:
+  live-run:
     runs-on: ubuntu-latest
     steps:
+      - name: Refuse to run before the hackathon's kickoff (2026-08-28 15:00 UTC)
+        run: |
+          now=$(date -u +%s)
+          kickoff=$(date -u -d "2026-08-28T15:00:00Z" +%s)
+          if [ "$now" -lt "$kickoff" ]; then
+            echo "::error::Before kickoff (2026-08-28 15:00 UTC), refusing to run live."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install dependencies (via "python -m pip", not bare "pip" — guarantees the
+      - name: Install dependencies (via "python -m pip", not bare "pip", guarantees the
           console scripts land next to THIS python's own executable, not some other one
           on PATH; this was the actual root cause of the first two failed runs)
         run: python -m pip install -r requirements.txt
 
-      - name: Write .env (from repo secrets, never committed — .env is gitignored)
+      - name: Write .env (from repo secrets, never committed, .env is gitignored)
         run: |
           echo "ALPACA_API_KEY=${{ secrets.ALPACA_API_KEY }}" >> .env
           echo "ALPACA_SECRET_KEY=${{ secrets.ALPACA_SECRET_KEY }}" >> .env
@@ -51,13 +65,13 @@ jobs:
           install itself is broken, before the agent gets a confusing downstream error)
         run: python -c "from alpaca_mcp_server.cli import main; print('import OK:', main)"
 
-      - name: Run the agent (dry run — no --live flag, ever, in CI)
-        run: python agent.py
+      - name: Run the agent, live
+        run: python agent.py --live
 
       - name: Commit the decision log
         run: |
           git config user.name "hackathon-agent-bot"
           git config user.email "actions@users.noreply.github.com"
           git add log/
-          git diff --cached --quiet || git commit -m "Scheduled dry-run scan $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git diff --cached --quiet || git commit -m "Scheduled live run $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push
