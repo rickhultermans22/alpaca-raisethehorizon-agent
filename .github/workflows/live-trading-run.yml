@@ -16,7 +16,12 @@ name: Scheduled live trading run
 
 on:
   schedule:
-    - cron: '0 14,17,20 * * 1-5'   # 14:00 / 17:00 / 20:00 UTC, weekdays, open through close
+    # Hourly through the U.S. session (13:00-20:00 UTC), weekdays. Widened from 3x/day
+    # after 2026-08-28's kickoff day showed GitHub's own cron scheduler can be delayed
+    # for hours under load (one run landed 3.5h late, a second was simply skipped) --
+    # more scheduled attempts means a single delay/skip does less damage, and it lets
+    # day-limit orders get re-priced against a fresher quote more often.
+    - cron: '0 13-20 * * 1-5'
   workflow_dispatch: {}             # manual "Run workflow" button too
 
 permissions:

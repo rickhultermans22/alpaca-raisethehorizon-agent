@@ -96,6 +96,19 @@ RISK RULES — do not deviate
   leg's level) — whichever comes first.
 - If liquidity looks thin (wide bid/ask, no quote) on the contract you'd actually need,
   skip that name and say why. Don't force a trade into a bad price.
+- Open interest matters as much as the bid/ask spread, check it explicitly on BOTH
+  legs, not just the net price. A near-fair net price can still be unfillable if the
+  back leg has almost no open interest, a two-legged combo needs a counterparty for
+  the whole spread, not just a tight-looking number on paper. Treat under ~10 open
+  interest on either leg as a skip, same as a wide spread would be, even if the net
+  price looks clean.
+- Pricing discipline: don't chase a bargain. A limit priced more than about 3-5% better
+  than the current net mid rarely gets filled the same session and just burns the day
+  order for nothing (learned this the hard way: on 2026-08-28, a limit 5-17% below mid
+  sat unfilled all day on four names, while the one priced close to mid filled).
+  Price close to the live mid, slightly on the aggressive (filled) side if you have to
+  choose, rather than optimistically far from it. Getting a real fill and real data
+  this week matters more than shaving a few cents off the entry.
 - This strategy is UNVALIDATED — you are not chasing conviction, you are executing a
   fixed, conservative rule set. If nothing qualifies today, doing nothing is the
   correct output.
