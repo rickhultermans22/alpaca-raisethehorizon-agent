@@ -16,15 +16,21 @@ name: Scheduled live trading run
 
 on:
   schedule:
-    # Hourly through the U.S. session, weekdays, offset to :22 past the hour rather
-    # than :00. GitHub's own docs call out the top of the hour as the highest-load,
-    # most-delayed moment for scheduled workflows ("High load times include the start
-    # of every hour... schedule your workflow to run at a different time of the hour
-    # to decrease the chance of delay"). Firing exactly on :00 is likely why NOTHING
-    # ran between 2026-08-28 23:29 UTC and 2026-08-31 (a full weekend + Monday morning
-    # with zero executions, discovered during a status check) -- not just delayed this
-    # time, apparently dropped outright.
-    - cron: '22 13-20 * * 1-5'
+    # Every 15 minutes through the U.S. session, weekdays (:07/:22/:37/:52, still off
+    # the top of the hour out of habit, though that was never the real problem -- see
+    # below). Every 5 minutes (the platform minimum) would be excessive for a strategy
+    # that only meaningfully changes over hours, so 15 is "as often as makes sense."
+    #
+    # ROOT CAUSE LOG, for whoever reads this next: the 2026-08-28 through 2026-08-31
+    # gap in scheduled runs was NOT a cron-scheduling problem. Two wrong turns were
+    # taken chasing that theory (offsetting off :00, then suspecting a stale Alpaca
+    # key) before the actual cause surfaced from a manual run's full log: alpaca-mcp-
+    # server and its fastmcp dependency were unpinned in requirements.txt, so a fresh
+    # CI install silently picked up an incompatible newer release
+    # (ModuleNotFoundError: fastmcp.tools.tool) while the locally-cached environment
+    # kept working. Fixed by pinning exact versions. Don't re-litigate the scheduling
+    # theory if this ever breaks again -- check for unpinned dependencies first.
+    - cron: '7,22,37,52 13-20 * * 1-5'
   workflow_dispatch: {}             # manual "Run workflow" button too
 
 permissions:
