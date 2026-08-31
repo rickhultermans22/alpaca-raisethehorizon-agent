@@ -16,10 +16,10 @@ name: Scheduled live trading run
 
 on:
   schedule:
-    # Every 15 minutes through the U.S. session, weekdays (:07/:22/:37/:52, still off
-    # the top of the hour out of habit, though that was never the real problem -- see
-    # below). Every 5 minutes (the platform minimum) would be excessive for a strategy
-    # that only meaningfully changes over hours, so 15 is "as often as makes sense."
+    # Every ~22 minutes through the U.S. session, weekdays (:00/:22/:44 each hour; 60
+    # isn't evenly divisible by 22, so the gap to the next hour's :00 is shorter, close
+    # enough). Every 5 minutes (the platform minimum) would be excessive for a strategy
+    # that only meaningfully changes over hours.
     #
     # ROOT CAUSE LOG, for whoever reads this next: the 2026-08-28 through 2026-08-31
     # gap in scheduled runs was NOT a cron-scheduling problem. Two wrong turns were
@@ -30,7 +30,7 @@ on:
     # (ModuleNotFoundError: fastmcp.tools.tool) while the locally-cached environment
     # kept working. Fixed by pinning exact versions. Don't re-litigate the scheduling
     # theory if this ever breaks again -- check for unpinned dependencies first.
-    - cron: '7,22,37,52 13-20 * * 1-5'
+    - cron: '*/22 13-20 * * 1-5'
   workflow_dispatch: {}             # manual "Run workflow" button too
 
 permissions:
