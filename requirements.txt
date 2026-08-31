@@ -1,8 +1,9 @@
 alpaca-py>=0.43.5
 pandas
 python-dotenv
-mcp
-alpaca-mcp-server
+mcp==1.29.1
+alpaca-mcp-server==2.3.0
+fastmcp==3.4.7
 anthropic==0.125.0
 streamlit
 plotly
