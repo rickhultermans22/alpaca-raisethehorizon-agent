@@ -16,7 +16,7 @@ name: Scheduled live trading run
 
 on:
   schedule:
-    # Hourly through the U.S. session, weekdays, offset to :13 past the hour rather
+    # Hourly through the U.S. session, weekdays, offset to :22 past the hour rather
     # than :00. GitHub's own docs call out the top of the hour as the highest-load,
     # most-delayed moment for scheduled workflows ("High load times include the start
     # of every hour... schedule your workflow to run at a different time of the hour
@@ -24,7 +24,7 @@ on:
     # ran between 2026-08-28 23:29 UTC and 2026-08-31 (a full weekend + Monday morning
     # with zero executions, discovered during a status check) -- not just delayed this
     # time, apparently dropped outright.
-    - cron: '13 13-20 * * 1-5'
+    - cron: '22 13-20 * * 1-5'
   workflow_dispatch: {}             # manual "Run workflow" button too
 
 permissions:
