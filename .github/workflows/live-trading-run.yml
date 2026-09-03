@@ -15,39 +15,13 @@ name: Scheduled live trading run
 # can't place a real trade before the event has actually started.
 
 on:
-  schedule:
-    # ~22 minutes apart through the U.S. session, weekdays, at :08/:30/:52 -- NOT
-    # '*/22', which resolves to :00/:22/:44 and silently re-includes :00, the exact
-    # highest-load slot this was supposed to avoid (found 2026-09-01: a run queued for
-    # 20:44 UTC didn't actually fire until 23:12 UTC, a ~2.5h delay, on the very
-    # schedule meant to fix that). Every 5 minutes (the platform minimum) would be
-    # excessive for a strategy that only meaningfully changes over hours.
-    #
-    # ROOT CAUSE LOG, for whoever reads this next: the 2026-08-28 through 2026-08-31
-    # gap in scheduled runs was NOT a cron-scheduling problem. Two wrong turns were
-    # taken chasing that theory (offsetting off :00, then suspecting a stale Alpaca
-    # key) before the actual cause surfaced from a manual run's full log: alpaca-mcp-
-    # server and its fastmcp dependency were unpinned in requirements.txt, so a fresh
-    # CI install silently picked up an incompatible newer release
-    # (ModuleNotFoundError: fastmcp.tools.tool) while the locally-cached environment
-    # kept working. Fixed by pinning exact versions. Multi-hour delay on top of that
-    # (even after the crash was fixed) is a separate, still-partially-open issue:
-    # GitHub's own docs only promise best-effort timing for scheduled workflows, not
-    # a guarantee, so some slack should always be expected, not just tolerated once.
-    #
-    # 2026-09-02: zero scheduled runs fired between 2026-09-01 22:32 UTC and this
-    # commit (16h+, spanning four expected slots: 13:08/13:30/13:52/14:08 UTC), while
-    # githubstatus.com showed all-green and the workflow's API state was "active".
-    # GitHub Community discussion #199267 and #185081 both point at the same known
-    # cause: a scheduled workflow's trigger can go stale when no new commit has
-    # landed on the default branch for a while, and pushing any commit to the
-    # default branch resyncs it. Last commit before this one was the 22:35 UTC
-    # decision-log commit from the last successful run -- so this comment update
-    # doubles as that resync nudge. If runs resume right after this push, that
-    # confirms the mechanism; if not, the external cron-job.org -> workflow_dispatch
-    # bridge (see README) is the next step, not more guessing.
-    - cron: '8,30,52 13-20 * * 1-5'
-  workflow_dispatch: {}             # manual "Run workflow" button too
+  # SHUT DOWN 2026-09-03: Rick decided to skip the hackathon submission ("project
+  # over en sluiten... schakel alles maar af"). The `schedule:` trigger below is
+  # deliberately removed so no further autonomous live runs fire. History of the
+  # cron value and the scheduling saga (two real outages, both root-caused and
+  # fixed, see git log on this file) is preserved there for reference, not deleted.
+  # workflow_dispatch stays so a manual run is still possible if ever wanted again.
+  workflow_dispatch: {}             # manual "Run workflow" button only, no schedule
 
 permissions:
   contents: write   # needed to commit the decision log back to the repo
